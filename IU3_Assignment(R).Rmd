@@ -1,0 +1,97 @@
+#load dataset
+galton <- read.csv("~/Eds/NICF-Data Queries and Visualization Basics (SF)/DSE-0721A NICF-Data Science Essentials(SF)/GaltonFamilies.csv", header = TRUE, sep = ",")
+
+head(galton)
+
+#1. Create a function to plot histogram with name hist.plot
+##options(repos = c(CRAN = "http://cran.rstudio.com"))
+##install.packages('gridExtra')
+hist.plot = function(df, col, bw, max, min){
+    ggplot(df, aes_string(col)) +
+      geom_histogram( binwidth = bw) +
+      xlim(min, max)
+}
+
+#2. Create a function to call the above function and plot histogram for two columns
+#a. Create a function hist.family with parameters of df, col1,col2 and num.bin as 30
+hist.family = function(df, col1, col2, num.bin = 30){
+    require(ggplot2)
+    require(gridExtra)
+#b. Compute bin width
+max = max(c(df[, col1], df[, col2]))
+    min = min(c(df[, col1], df[, col2]))
+    bin.width = (max - min)/num.bin
+#c. Create a first histogram
+    p1 = hist.plot(df, col1, bin.width, max, min)
+        p1 = p1 + geom_vline(xintercept = mean(df[, col1]),
+            color = 'red', size = 1)
+#d. Create a second histogram
+    p2 = hist.plot(df, col2, bin.width, max, min)
+#e. Stack up the plots
+grid.arrange(p1, p2, nrow = 2, ncol = 1) }
+#f. Declare sons variable with gender male
+sons = galton[galton$gender == 'male', ]
+#g. Call the function hist.family created in step 2.a with two parameters and df, 
+#which is sons as df and childheight , mother as col1 and col2
+hist.family(sons, 'childHeight', 'mother')
+
+
+#Next you will compare the heights of mothers to the heights of their daughters.
+#a. Declare daughters variable with gender male
+daughters = galton[galton$gender == 'female', ]
+#b. Call the function hist.family created in step 2.a with two parameters and df,
+#which is sons as df and childheight , mother as col1 and col2
+hist.family(daughters, 'childHeight', 'mother')
+        p2 = p2 + geom_vline(xintercept = mean(df[, col2]),
+            color = 'red', size = 1)
+            
+#The family.test function in the cell below uses the base R t.test function to 
+#compute the two-sided t statistics. The hist.family.conf funcion calls the 
+#family.test function and plots the results. Execute this code to compute and 
+#display the results.
+families.test <- function(df, col1, col2, paired = TRUE){
+    t.test(df[, col1], df[, col2], paired = paired)
+}
+
+hist.family.conf <- function(df, col1, col2, num.bin = 30, paired = FALSE){
+    require(ggplot2)
+    require(gridExtra)
+
+## Compute bin width
+    max = max(c(df[, col1], df[, col2]))
+    min = min(c(df[, col1], df[, col2]))
+    bin.width = (max - min)/num.bin
+
+    mean1 <- mean(df[, col1])
+    mean2 <- mean(df[, col2])
+    t <- t.test(df[, col1], df[, col2], paired = paired)
+    pv1 <- mean2 + t$conf.int[1]
+    pv2 <- mean2 + t$conf.int[2]
+
+## Plot a histogram
+    p1 <- hist.plot(df, col1, bin.width, max, min)
+    p1 <- p1 + geom_vline(xintercept = mean1,
+            color = 'red', size = 1) +
+        geom_vline(xintercept = pv1,
+            color = 'red', size = 1, linetype = 2) +
+        geom_vline(xintercept = pv2,
+            color = 'red', size = 1, linetype =2)
+
+## A simple boxplot
+p2 <- hist.plot(df, col2, bin.width, max, min)
+p2 <- p2 + geom_vline(xintercept = mean2,
+            color = 'red', size = 1.5)
+
+## Now stack the plots
+grid.arrange(p1, p2, nrow = 2)
+
+print(t)
+}
+
+hist.family.conf(sons, 'mother', 'childHeight')
+
+hist.family.conf(daughters, 'mother', 'childHeight')
+
+hist.family.conf(daughters, 'father', 'childHeight')
+
+hist.family.conf(sons, 'father', 'childHeight')
